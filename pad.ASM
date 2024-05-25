@@ -208,7 +208,7 @@ section '.data' data readable writeable
   bfr dd ?
   hFile dd ?
   hFileWrite dd ?
-  nSize dd 1000
+  nSize dd ?
   result_of_reading dd ?
   result_of_writing dd ?
   get_text_content dd ?
@@ -223,7 +223,7 @@ section '.data' data readable writeable
 
   _title TCHAR 'EdiText',0
   _about_title TCHAR 'About MiniPad',0
-  _about_text TCHAR 'Made by Impérial from flat assembler example',0
+  _about_text TCHAR 'Made by ImpÃ©rial from flat assembler example',0
   _error TCHAR 'Startup failed.',0
 
   _class TCHAR 'MINIPAD32',0
