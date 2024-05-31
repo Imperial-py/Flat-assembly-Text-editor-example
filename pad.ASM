@@ -15,8 +15,11 @@ IDM_NEW   = 101
 IDM_EXIT  = 102
 IDM_OPEN  = 200
 IDM_SAVE  = 201
+IDM_COLOR = 300
 IDM_ABOUT = 901
 
+
+cv=0x000000FF
 section '.text' code readable executable
 
   start:
@@ -65,6 +68,8 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         je      .wmcommand
         cmp     eax,WM_DESTROY
         je      .wmdestroy
+        cmp     [wmsg], WM_CTLCOLOREDIT
+        je      .editcolor
   .defwndproc:
         invoke  DefWindowProc,[hwnd],[wmsg],[wparam],[lparam]
         jmp     .finish
@@ -74,7 +79,7 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         or      eax,eax
         jz      .failed
         mov     [edithwnd],eax
-        invoke  CreateFont,16,0,0,0,0,FALSE,FALSE,FALSE,ANSI_CHARSET,OUT_RASTER_PRECIS,CLIP_DEFAULT_PRECIS,DEFAULT_QUALITY,FIXED_PITCH+FF_DONTCARE,NULL
+        invoke  CreateFont,16,0,0,0,800,FALSE,FALSE,FALSE,ANSI_CHARSET,OUT_RASTER_PRECIS,CLIP_DEFAULT_PRECIS,DEFAULT_QUALITY,DEFAULT_PITCH+FF_ROMAN,NULL      ; invoke  CreateFont,16,0,0,0,0,FALSE,FALSE,FALSE,ANSI_CHARSET,OUT_RASTER_PRECIS,CLIP_DEFAULT_PRECIS,DEFAULT_QUALITY,FIXED_PITCH+FF_DONTCARE,NULL
         or      eax,eax
         jz      .failed
         mov     [editfont],eax
@@ -106,7 +111,12 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         je      .savedialog
         cmp     eax,IDM_OPEN
         je     .opendialog
+        cmp     eax,IDM_COLOR
+        je     .apply_font
         jmp     .defwndproc ;designate the end of this section
+      .editcolor:
+        invoke  SetTextColor, [wparam], 0x000000FF
+        jmp .finish
       .new:
         invoke  SendMessage,[edithwnd],WM_SETTEXT,0,0
         jmp     .finish
@@ -149,6 +159,24 @@ proc WindowProc hwnd,wmsg,wparam,lparam
                 invoke CloseHandle, [hFile]
         .endif
         jmp     .finish
+  .apply_font:
+
+        ;invoke SetTextColor,[edithwnd],0x000000FF
+        ;mov [lParam],eax
+        ;invoke  MessageBox,HWND_DESKTOP,lParam,lParam,MB_OK
+        ;invoke  SendMessage,[edithwnd],WM_CTLCOLOREDIT,0x000000FF
+        ;invoke COLORREF,
+
+        invoke  CreateFont, 200, 0, 0, 255, 0, FALSE, FALSE, FALSE,\
+                       DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,\
+                       \
+                       ANTIALIASED_QUALITY,\   ; The font is antialiased or smoothed
+                       \                       ; depending on its size.
+                       \
+                       FIXED_PITCH + FF_DONTCARE, "font"
+        mov [font],eax
+        invoke  SendMessage,[edithwnd],WM_SETFONT,font
+        jmp .finish
   .savedialog:
         ;invoke PeekMessageA,get_text_content,[edithwnd],WM_SETTEXT,WM_KEYLAST
         ;invoke  SendMessage,[edithwnd],WM_GETTEXT,0,get_text_content
@@ -204,6 +232,7 @@ section '.data' data readable writeable
              db 'All files',0,'*.*',0
              db 0
 
+
   asm_extension db '.txt',0
   bfr dd ?
   hFile dd ?
@@ -215,9 +244,14 @@ section '.data' data readable writeable
   lpBytesRead dd ?
   lpBuffer rb 8192
   lpBytesWrite dd ?
+
+
+  clr_text dd ?
+
   variable_buffer_size dd ?
   ofn OPENFILENAME
 
+  font dd ?
   name_buffer rb NAME_MAX
   path_buffer rb PATH_MAX
 
@@ -276,6 +310,8 @@ section '.idata' import data readable writeable
 
   import gdi,\
          CreateFont,'CreateFontA',\
+         CreateSolidBrush,'CreateSolidBrush',\
+         SetTextColor,'SetTextColor',\
          DeleteObject,'DeleteObject'
 
   import commdlg,\
@@ -309,6 +345,7 @@ section '.rsrc' resource data readable
                 menuitem '&New',IDM_NEW
                 menuitem '&Open',IDM_OPEN
                 menuitem '&Save',IDM_SAVE
+                menuitem '&Color',IDM_COLOR
                 menuseparator
                 menuitem 'E&xit',IDM_EXIT,MFR_END
 
