@@ -115,7 +115,8 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         je     .apply_font
         jmp     .defwndproc ;designate the end of this section
       .editcolor:
-        invoke  SetTextColor, [wparam], 0x000000FF
+        ;invoke  MessageBox,HWND_DESKTOP,clr ,clr ,MB_OK
+        invoke  SetTextColor, [wparam], [clr];0x000000FF
         jmp .finish
       .new:
         invoke  SendMessage,[edithwnd],WM_SETTEXT,0,0
@@ -167,15 +168,20 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         ;invoke  SendMessage,[edithwnd],WM_CTLCOLOREDIT,0x000000FF
         ;invoke COLORREF,
 
-        invoke  CreateFont, 200, 0, 0, 255, 0, FALSE, FALSE, FALSE,\
-                       DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,\
-                       \
-                       ANTIALIASED_QUALITY,\   ; The font is antialiased or smoothed
-                       \                       ; depending on its size.
-                       \
-                       FIXED_PITCH + FF_DONTCARE, "font"
-        mov [font],eax
-        invoke  SendMessage,[edithwnd],WM_SETFONT,font
+        mov [cclr.lpCustColors],cclr.lpCustColors
+        mov [cclr.lStructSize],9*4
+        mov [cclr.Flags],$2
+        mov [cclr.hwndOwner],$0
+        mov [cclr.hInstance],$0
+        mov [cclr.rgbResult],$0
+        mov [cclr.lCustData],$0
+        mov [cclr.lpTemplateName],$0
+        invoke ChooseColor,cclr
+        mov eax, [cclr.rgbResult]
+        mov [clr], eax
+        invoke SetTextColor, [wparam], clr
+
+
         jmp .finish
   .savedialog:
         ;invoke PeekMessageA,get_text_content,[edithwnd],WM_SETTEXT,WM_KEYLAST
@@ -246,10 +252,14 @@ section '.data' data readable writeable
   lpBytesWrite dd ?
 
 
-  clr_text dd ?
+  clr dd ?
+
+
 
   variable_buffer_size dd ?
   ofn OPENFILENAME
+
+  cclr CHOOSECOLOR
 
   font dd ?
   name_buffer rb NAME_MAX
@@ -276,8 +286,8 @@ section '.idata' import data readable writeable
   library kernel,'KERNEL32.DLL',\
           user,'USER32.DLL',\
           gdi,'GDI32.DLL',\
-          commdlg,'COMDLG32.DLL'
-
+          comdlg32,'comdlg32'
+  include 'api\comdlg32.inc'
   import kernel,\
          GetModuleHandle,'GetModuleHandleA',\
          ReadFile,'ReadFile',\
@@ -314,9 +324,6 @@ section '.idata' import data readable writeable
          SetTextColor,'SetTextColor',\
          DeleteObject,'DeleteObject'
 
-  import commdlg,\
-         GetSaveFileNameA,'GetSaveFileNameA',\
-         GetOpenFileName,'GetOpenFileNameA'
 section '.rsrc' resource data readable
 
   ; resource directory
