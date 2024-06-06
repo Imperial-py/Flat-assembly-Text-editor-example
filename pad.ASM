@@ -16,6 +16,7 @@ IDM_EXIT  = 102
 IDM_OPEN  = 200
 IDM_SAVE  = 201
 IDM_COLOR = 300
+IDM_FONT  = 301
 IDM_ABOUT = 901
 
 
@@ -112,6 +113,8 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         cmp     eax,IDM_OPEN
         je     .opendialog
         cmp     eax,IDM_COLOR
+        je     .apply_color
+        cmp     eax,IDM_FONT
         je     .apply_font
         jmp     .defwndproc ;designate the end of this section
       .editcolor:
@@ -161,6 +164,37 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         .endif
         jmp     .finish
   .apply_font:
+        mov [cfont.lStructSize],sizeof.CHOOSEFONT
+        mov [cfont.hwndOwner],$0
+        mov [cfont.hInstance],edithwnd
+        mov [cfont.hDC],$0
+        mov [cfont.lpLogFont],lfont
+        mov [cfont.iPointSize],$0
+        mov [cfont.Flags],$0
+        mov [cfont.rgbColors],$0
+        mov [cfont.lCustData],$0
+        mov [cfont.lpfnHook],$0
+        mov [cfont.lpTemplateName],$0
+        mov [cfont.lpszStyle],$0
+        ;mov [cfont.nFontType],$0
+        mov [cfont.nSizeMin],10
+        mov [cfont.nSizeMax],100
+        invoke ChooseFont,cfont
+        invoke CreateFontIndirect,lfont
+        invoke  SendMessage,[edithwnd],WM_SETFONT,eax
+        ;invoke  MessageBox,HWND_DESKTOP,lfont.lfPitchAndFamily,cfont.iPointSize,MB_OK
+        invoke  CreateFont, lfont.lfHeight,lfont.lfWidth, lfont.lfEscapement, lfont.lfOrientation,lfont.lfWeight, lfont.lfItalic, lfont.lfUnderline, lfont.lfStrikeOut,\
+                       lfont.lfCharSet, lfont.lfOutPrecision, lfont.lfClipPrecision,\
+                       \
+                       lfont.lfQuality,\   ; The font is antialiased or smoothed
+                       \                       ; depending on its size.
+                       \
+                       lfont.lfPitchAndFamily, "font"
+        mov [editfont],lfont
+        ;invoke  SendMessage,[edithwnd],WM_SETFONT,editfont,FALSE
+        ;invoke  SendMessage,[edithwnd],WM_SETFONT,font
+        jmp .finish
+  .apply_color:
 
         ;invoke SetTextColor,[edithwnd],0x000000FF
         ;mov [lParam],eax
@@ -180,6 +214,18 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         mov eax, [cclr.rgbResult]
         mov [clr], eax
         invoke SetTextColor, [wparam], clr
+                ;display cclr.rgbResult
+        invoke  MessageBox,HWND_DESKTOP,clr,clr ,MB_OK
+        invoke  CreateFont, 200, 0, 0, 255, 0, FALSE, FALSE, FALSE,\
+                       DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,\
+                       \
+                       ANTIALIASED_QUALITY,\   ; The font is antialiased or smoothed
+                       \                       ; depending on its size.
+                       \
+                       FIXED_PITCH + FF_DONTCARE, "font"
+        mov [font],eax
+        invoke  SendMessage,[edithwnd],WM_SETFONT,font
+        ;invoke  MessageBox,HWND_DESKTOP,cclr.rgbResult ,cclr.rgbResult ,name_buffer,MB_OK
 
 
         jmp .finish
@@ -261,6 +307,10 @@ section '.data' data readable writeable
 
   cclr CHOOSECOLOR
 
+  cfont CHOOSEFONT
+
+  lfont LOGFONT
+
   font dd ?
   name_buffer rb NAME_MAX
   path_buffer rb PATH_MAX
@@ -321,6 +371,7 @@ section '.idata' import data readable writeable
   import gdi,\
          CreateFont,'CreateFontA',\
          CreateSolidBrush,'CreateSolidBrush',\
+         CreateFontIndirect,'CreateFontIndirectA',\
          SetTextColor,'SetTextColor',\
          DeleteObject,'DeleteObject'
 
@@ -353,6 +404,7 @@ section '.rsrc' resource data readable
                 menuitem '&Open',IDM_OPEN
                 menuitem '&Save',IDM_SAVE
                 menuitem '&Color',IDM_COLOR
+                menuitem '&Font',IDM_FONT
                 menuseparator
                 menuitem 'E&xit',IDM_EXIT,MFR_END
 
