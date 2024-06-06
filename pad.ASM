@@ -215,16 +215,16 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         mov [clr], eax
         invoke SetTextColor, [wparam], clr
                 ;display cclr.rgbResult
-        invoke  MessageBox,HWND_DESKTOP,clr,clr ,MB_OK
-        invoke  CreateFont, 200, 0, 0, 255, 0, FALSE, FALSE, FALSE,\
-                       DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,\
-                       \
-                       ANTIALIASED_QUALITY,\   ; The font is antialiased or smoothed
-                       \                       ; depending on its size.
-                       \
-                       FIXED_PITCH + FF_DONTCARE, "font"
-        mov [font],eax
-        invoke  SendMessage,[edithwnd],WM_SETFONT,font
+        ;invoke  MessageBox,HWND_DESKTOP,clr,clr ,MB_OK
+        ;invoke  CreateFont, 200, 0, 0, 255, 0, FALSE, FALSE, FALSE,\
+        ;               DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,\
+        ;               \
+        ;               ANTIALIASED_QUALITY,\   ; The font is antialiased or smoothed
+        ;               \                       ; depending on its size.
+        ;               \
+        ;               FIXED_PITCH + FF_DONTCARE, "font"
+        ;mov [font],eax
+        ;invoke  SendMessage,[edithwnd],WM_SETFONT,font
         ;invoke  MessageBox,HWND_DESKTOP,cclr.rgbResult ,cclr.rgbResult ,name_buffer,MB_OK
 
 
