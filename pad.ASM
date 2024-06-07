@@ -180,19 +180,11 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         mov [cfont.nSizeMin],10
         mov [cfont.nSizeMax],100
         invoke ChooseFont,cfont
-        invoke CreateFontIndirect,lfont
-        invoke  SendMessage,[edithwnd],WM_SETFONT,eax
-        ;invoke  MessageBox,HWND_DESKTOP,lfont.lfPitchAndFamily,cfont.iPointSize,MB_OK
-        invoke  CreateFont, lfont.lfHeight,lfont.lfWidth, lfont.lfEscapement, lfont.lfOrientation,lfont.lfWeight, lfont.lfItalic, lfont.lfUnderline, lfont.lfStrikeOut,\
-                       lfont.lfCharSet, lfont.lfOutPrecision, lfont.lfClipPrecision,\
-                       \
-                       lfont.lfQuality,\   ; The font is antialiased or smoothed
-                       \                       ; depending on its size.
-                       \
-                       lfont.lfPitchAndFamily, "font"
-        mov [editfont],lfont
-        ;invoke  SendMessage,[edithwnd],WM_SETFONT,editfont,FALSE
-        ;invoke  SendMessage,[edithwnd],WM_SETFONT,font
+        .if eax
+            invoke CreateFontIndirect,lfont
+            invoke  SendMessage,[edithwnd],WM_SETFONT,eax
+        .endif
+
         jmp .finish
   .apply_color:
 
