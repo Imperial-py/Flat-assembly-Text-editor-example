@@ -6,7 +6,7 @@ entry start
 
 ;include 'win32a.inc'
 include 'win32ax.inc'
-
+include 'ENCODING\utf8.inc'
 
 IDR_ICON = 17
 IDR_MENU = 37
@@ -20,7 +20,7 @@ IDM_FONT  = 301
 IDM_ABOUT = 901
 
 
-cv=0x000000FF
+IDM_SCROLL_BAR_COLOR = 1000
 section '.text' code readable executable
 
   start:
@@ -55,7 +55,30 @@ section '.text' code readable executable
 
   end_loop:
         invoke  ExitProcess,[msg.wParam]
+proc sub_edit_proc hedit,umsg,wparam,lparam
+     ;invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
+      cmp     [umsg],WM_CTLCOLORSCROLLBAR
+      je      .para_scrollbar_color
 
+      ; all other ones forwared to original WindowProc:
+      invoke  CallWindowProc,[_def_edit_proc],[hedit],[umsg],[wparam],[lparam]
+      jmp     .finished
+      .para_scrollbar_color:
+        invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
+        invoke CreateSolidBrush,[brush_clref]
+        invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
+        .if eax
+        invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
+        .endif
+        mov [brush_handle],eax
+        invoke SelectObject,[wparam],[brush_handle]
+        invoke DeleteObject,[brush_handle]
+        jmp .finished
+      .finished:
+        pop     edi esi ebx
+        ret
+
+endp
 proc WindowProc hwnd,wmsg,wparam,lparam
         push    ebx esi edi
         mov     eax,[wmsg]
@@ -69,7 +92,7 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         je      .wmcommand
         cmp     eax,WM_DESTROY
         je      .wmdestroy
-        cmp     [wmsg], WM_CTLCOLOREDIT
+        cmp     [wmsg],WM_CTLCOLOREDIT
         je      .editcolor
   .defwndproc:
         invoke  DefWindowProc,[hwnd],[wmsg],[wparam],[lparam]
@@ -86,6 +109,18 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         mov     [editfont],eax
         invoke  SendMessage,[edithwnd],WM_SETFONT,eax,FALSE
         xor     eax,eax
+        ;;;;;;;;;;;;;
+        ;-----------------
+        ;;;;;;;;;;;;;
+        push    sub_edit_proc
+        push    GWL_WNDPROC
+        push    eax
+        invoke  GetWindowLong,eax,GWL_WNDPROC
+        mov     [_def_edit_proc],eax
+        call    [SetWindowLong]
+        invoke  SetWindowLong,[edithwnd],GWL_WNDPROC,sub_edit_proc
+        mov     [_def_edit_proc],eax
+
         jmp     .finish
       .failed:
         or      eax,-1
@@ -116,6 +151,10 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         je     .apply_color
         cmp     eax,IDM_FONT
         je     .apply_font
+        cmp     eax,IDM_SCROLL_BAR_COLOR
+        je     .set_scrollbar_color
+        cmp     [wparam],WM_CTLCOLORSCROLLBAR
+        je      .param_scrollbar_color
         jmp     .defwndproc ;designate the end of this section
       .editcolor:
         ;invoke  MessageBox,HWND_DESKTOP,clr ,clr ,MB_OK
@@ -163,6 +202,30 @@ proc WindowProc hwnd,wmsg,wparam,lparam
                 invoke CloseHandle, [hFile]
         .endif
         jmp     .finish
+  .set_scrollbar_color:
+        mov [cclr.lpCustColors],cclr.lpCustColors
+        mov [cclr.lStructSize],9*4
+        mov [cclr.Flags],$2
+        mov [cclr.hwndOwner],$0
+        mov [cclr.hInstance],$0
+        mov [cclr.rgbResult],$0
+        mov [cclr.lCustData],$0
+        mov [cclr.lpTemplateName],$0
+        invoke ChooseColor,cclr
+        mov eax, [cclr.rgbResult]
+        mov [brush_clref], eax
+        jmp .finish
+  .param_scrollbar_color:
+        invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
+        invoke CreateSolidBrush,[brush_clref]
+        .if eax
+        invoke MessageBox,HWND_DESKTOP,'ult' ,'cclr.rgbResult' ,name_buffer,MB_OK
+        .endif
+        ;invoke MessageBox,HWND_DESKTOP,'ult' ,'cclr.rgbResult' ,name_buffer,MB_OK
+        mov [brush_handle],eax
+        invoke SelectObject,[wparam],[brush_handle]
+        invoke DeleteObject,[brush_handle]
+        jmp .finish
   .apply_font:
         mov [cfont.lStructSize],sizeof.CHOOSEFONT
         mov [cfont.hwndOwner],$0
@@ -292,7 +355,8 @@ section '.data' data readable writeable
 
   clr dd ?
 
-
+  brush_clref dd ?
+  brush_handle dd ?
 
   variable_buffer_size dd ?
   ofn OPENFILENAME
@@ -302,6 +366,8 @@ section '.data' data readable writeable
   cfont CHOOSEFONT
 
   lfont LOGFONT
+
+  _def_edit_proc dd ?
 
   font dd ?
   name_buffer rb NAME_MAX
@@ -358,11 +424,14 @@ section '.idata' import data readable writeable
          SetFocus,'SetFocus',\
          MessageBox,'MessageBoxA',\
          GetMessageA,'GetMessageA',\
+         GetWindowLong,'GetWindowLongA',\
+         CallWindowProc,'CallWindowProcW',\
          PostQuitMessage,'PostQuitMessage'
 
   import gdi,\
          CreateFont,'CreateFontA',\
          CreateSolidBrush,'CreateSolidBrush',\
+         SelectObject,'SelectObject',\
          CreateFontIndirect,'CreateFontIndirectA',\
          SetTextColor,'SetTextColor',\
          DeleteObject,'DeleteObject'
@@ -395,13 +464,16 @@ section '.rsrc' resource data readable
                 menuitem '&New',IDM_NEW
                 menuitem '&Open',IDM_OPEN
                 menuitem '&Save',IDM_SAVE
-                menuitem '&Color',IDM_COLOR
-                menuitem '&Font',IDM_FONT
                 menuseparator
                 menuitem 'E&xit',IDM_EXIT,MFR_END
 
 
+       menuitem '&Text',0,MFR_POPUP
+                menuitem '&Color',IDM_COLOR
+                menuitem '&Font',IDM_FONT,MFR_END
 
+       menuitem '&Graphics',0,MFR_POPUP
+                menuitem '&Change Scrollbar Color',IDM_SCROLL_BAR_COLOR,MFR_END
        menuitem '&Help',0,MFR_POPUP + MFR_END
                 menuitem '&About...',IDM_ABOUT,MFR_END
 
