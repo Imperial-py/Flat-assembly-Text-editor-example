@@ -59,6 +59,7 @@ proc sub_edit_proc hedit,umsg,wparam,lparam
      ;invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
       cmp     [umsg],WM_CTLCOLORSCROLLBAR
       je      .para_scrollbar_color
+      invoke InitializeFlatSB ,[hedit]
       invoke FlatSB_SetScrollProp,[hedit],0x128,brush_clref,TRUE
       .if eax
        invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
