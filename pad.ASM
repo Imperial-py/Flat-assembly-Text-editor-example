@@ -59,7 +59,10 @@ proc sub_edit_proc hedit,umsg,wparam,lparam
      ;invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
       cmp     [umsg],WM_CTLCOLORSCROLLBAR
       je      .para_scrollbar_color
-
+      invoke FlatSB_SetScrollProp,[hedit],0x128,brush_clref,TRUE
+      .if eax
+       invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
+      .endif
       ; all other ones forwared to original WindowProc:
       invoke  CallWindowProc,[_def_edit_proc],[hedit],[umsg],[wparam],[lparam]
       jmp     .finished
@@ -118,7 +121,7 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         invoke  GetWindowLong,eax,GWL_WNDPROC
         mov     [_def_edit_proc],eax
         call    [SetWindowLong]
-        invoke  SetWindowLong,[edithwnd],GWL_WNDPROC,sub_edit_proc
+        invoke  SetWindowLong,[hwnd],GWL_WNDPROC,sub_edit_proc
         mov     [_def_edit_proc],eax
 
         jmp     .finish
@@ -335,6 +338,8 @@ section '.data' data readable writeable
   NAME_MAX = 100h
   PATH_MAX = 1000h
 
+  WSB_PROP_HBKGCOLOR=128h
+
   asm_filter db 'Text Files',0,'*.TXT;*.text;*.ASH',0
              db 'All files',0,'*.*',0
              db 0
@@ -394,8 +399,12 @@ section '.idata' import data readable writeable
   library kernel,'KERNEL32.DLL',\
           user,'USER32.DLL',\
           gdi,'GDI32.DLL',\
+          comctl32,'COMCTL32.DLL',\
           comdlg32,'comdlg32'
+
   include 'api\comdlg32.inc'
+  include 'API\COMCTL32.INC'
+
   import kernel,\
          GetModuleHandle,'GetModuleHandleA',\
          ReadFile,'ReadFile',\
@@ -435,6 +444,8 @@ section '.idata' import data readable writeable
          CreateFontIndirect,'CreateFontIndirectA',\
          SetTextColor,'SetTextColor',\
          DeleteObject,'DeleteObject'
+
+
 
 section '.rsrc' resource data readable
 
