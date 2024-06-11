@@ -59,11 +59,10 @@ proc sub_edit_proc hedit,umsg,wparam,lparam
      ;invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
       cmp     [umsg],WM_CTLCOLORSCROLLBAR
       je      .para_scrollbar_color
+
       invoke InitializeFlatSB ,[hedit]
-      invoke FlatSB_SetScrollProp,[hedit],0x128,brush_clref,TRUE
-      .if eax
-       invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
-      .endif
+      invoke FlatSB_SetScrollProp,[hedit],0x00000080,brush_clref,TRUE
+
       ; all other ones forwared to original WindowProc:
       invoke  CallWindowProc,[_def_edit_proc],[hedit],[umsg],[wparam],[lparam]
       jmp     .finished
@@ -218,6 +217,7 @@ proc WindowProc hwnd,wmsg,wparam,lparam
         invoke ChooseColor,cclr
         mov eax, [cclr.rgbResult]
         mov [brush_clref], eax
+        invoke MessageBox,HWND_DESKTOP,'result' ,brush_clref ,MB_OK
         jmp .finish
   .param_scrollbar_color:
         invoke MessageBox,HWND_DESKTOP,'result' ,'returned a non null value' ,MB_OK
@@ -358,7 +358,7 @@ section '.data' data readable writeable
   lpBuffer rb 8192
   lpBytesWrite dd ?
 
-
+  bloat:   times 64000 db 0xCC
   clr dd ?
 
   brush_clref dd ?
